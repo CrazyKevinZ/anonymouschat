@@ -14,6 +14,11 @@ $action = $_GET['action'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
 $user_ip = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'];
 
+// 检查是否为管理员
+function isAdmin($username) {
+    return $username === 'fibulun';
+}
+
 // 获取IP对应的地区
 function getLocationByIP($ip, $qqwry_path) {
     if (!file_exists($qqwry_path)) {
@@ -115,12 +120,11 @@ if ($action === 'rooms' && $method === 'GET') {
 
 // 创建房间（管理员）
 if ($action === 'create_room' && $method === 'POST') {
-    $admin_pwd = $_POST['admin_password'] ?? '';
-    $name = $_POST['name'] ?? '';
-    
-    if ($admin_pwd !== $config['admin_password']) {
-        response(403, '管理员密码错误');
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
     }
+    
+    $name = $_POST['name'] ?? '';
     
     if (!$name) {
         response(400, '房间名称不能为空');
@@ -141,12 +145,11 @@ if ($action === 'create_room' && $method === 'POST') {
 
 // 删除房间（管理员）
 if ($action === 'delete_room' && $method === 'POST') {
-    $admin_pwd = $_POST['admin_password'] ?? '';
-    $room_id = $_POST['room_id'] ?? '';
-    
-    if ($admin_pwd !== $config['admin_password']) {
-        response(403, '管理员密码错误');
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
     }
+    
+    $room_id = $_POST['room_id'] ?? '';
     
     if (!$room_id) {
         response(400, '房间ID不能为空');
@@ -172,8 +175,9 @@ if ($action === 'send_message' && $method === 'POST') {
     }
     
     // 检查黑名单词
-    foreach ($config['blacklist']['words'] as $word) {
-        if (strpos($content, $word) !== false) {
+    $blacklist_words = $db->fetchAll("SELECT content FROM blacklist WHERE type = 'word'");
+    foreach ($blacklist_words as $item) {
+        if (strpos($content, $item['content']) !== false) {
             response(400, '消息包含禁用内容');
         }
     }
@@ -232,12 +236,11 @@ if ($action === 'messages' && $method === 'GET') {
 
 // 删除消息（管理员）
 if ($action === 'delete_message' && $method === 'POST') {
-    $admin_pwd = $_POST['admin_password'] ?? '';
-    $message_id = $_POST['message_id'] ?? '';
-    
-    if ($admin_pwd !== $config['admin_password']) {
-        response(403, '管理员密码错误');
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
     }
+    
+    $message_id = $_POST['message_id'] ?? '';
     
     $db->exec('DELETE FROM messages WHERE id = ?', [$message_id]);
     response(200, '消息删除成功');
@@ -245,12 +248,11 @@ if ($action === 'delete_message' && $method === 'POST') {
 
 // 清空房间消息（管理员）
 if ($action === 'clear_room' && $method === 'POST') {
-    $admin_pwd = $_POST['admin_password'] ?? '';
-    $room_id = $_POST['room_id'] ?? '';
-    
-    if ($admin_pwd !== $config['admin_password']) {
-        response(403, '管理员密码错误');
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
     }
+    
+    $room_id = $_POST['room_id'] ?? '';
     
     $db->exec('DELETE FROM messages WHERE room_id = ?', [$room_id]);
     response(200, '房间消息已清空');
@@ -258,10 +260,8 @@ if ($action === 'clear_room' && $method === 'POST') {
 
 // 获取用户信息（管理员）
 if ($action === 'users' && $method === 'GET') {
-    $admin_pwd = $_GET['admin_password'] ?? '';
-    
-    if ($admin_pwd !== $config['admin_password']) {
-        response(403, '管理员密码错误');
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
     }
     
     $users = $db->fetchAll(
@@ -273,12 +273,11 @@ if ($action === 'users' && $method === 'GET') {
 
 // 获取所有用户的发言记录（管理员）
 if ($action === 'user_messages' && $method === 'GET') {
-    $admin_pwd = $_GET['admin_password'] ?? '';
-    $user_id = $_GET['user_id'] ?? '';
-    
-    if ($admin_pwd !== $config['admin_password']) {
-        response(403, '管理员密码错误');
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
     }
+    
+    $user_id = $_GET['user_id'] ?? '';
     
     if ($user_id) {
         $messages = $db->fetchAll(
@@ -297,6 +296,124 @@ if ($action === 'user_messages' && $method === 'GET') {
     }
     
     response(200, '获取成功', $messages);
+}
+
+// 获取黑名单词（管理员）
+if ($action === 'get_blacklist_words' && $method === 'GET') {
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
+    }
+    
+    $words = $db->fetchAll("SELECT id, content FROM blacklist WHERE type = 'word'");
+    response(200, '获取成功', $words);
+}
+
+// 添加黑名单词（管理员）
+if ($action === 'add_blacklist_word' && $method === 'POST') {
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
+    }
+    
+    $content = $_POST['content'] ?? '';
+    
+    if (!$content) {
+        response(400, '内容不能为空');
+    }
+    
+    try {
+        $db->exec("INSERT INTO blacklist (type, content) VALUES (?, ?)", ['word', $content]);
+        response(200, '添加成功');
+    } catch (Exception $e) {
+        response(400, '该词已存在');
+    }
+}
+
+// 删除黑名单词（管理员）
+if ($action === 'delete_blacklist_word' && $method === 'POST') {
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
+    }
+    
+    $id = $_POST['id'] ?? '';
+    
+    $db->exec("DELETE FROM blacklist WHERE id = ? AND type = 'word'", [$id]);
+    response(200, '删除成功');
+}
+
+// 获取IP黑名单（管理员）
+if ($action === 'get_ip_blacklist' && $method === 'GET') {
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
+    }
+    
+    $ips = $db->fetchAll("SELECT id, ip, reason FROM ip_blacklist ORDER BY created_at DESC");
+    response(200, '获取成功', $ips);
+}
+
+// 添加IP黑名单（管理员）
+if ($action === 'add_ip_blacklist' && $method === 'POST') {
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
+    }
+    
+    $ip = $_POST['ip'] ?? '';
+    $reason = $_POST['reason'] ?? '';
+    
+    if (!$ip) {
+        response(400, 'IP不能为空');
+    }
+    
+    try {
+        $db->exec("INSERT INTO ip_blacklist (ip, reason) VALUES (?, ?)", [$ip, $reason]);
+        response(200, '添加成功');
+    } catch (Exception $e) {
+        response(400, '该IP已存在');
+    }
+}
+
+// 删除IP黑名单（管理员）
+if ($action === 'delete_ip_blacklist' && $method === 'POST') {
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
+    }
+    
+    $id = $_POST['id'] ?? '';
+    
+    $db->exec("DELETE FROM ip_blacklist WHERE id = ?", [$id]);
+    response(200, '删除成功');
+}
+
+// 编辑用户信息（管理员）
+if ($action === 'update_user' && $method === 'POST') {
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
+    }
+    
+    $user_id = $_POST['user_id'] ?? '';
+    $gender = $_POST['gender'] ?? '';
+    
+    if (!$user_id) {
+        response(400, '用户ID不能为空');
+    }
+    
+    $db->exec("UPDATE users SET gender = ? WHERE id = ?", [$gender, $user_id]);
+    response(200, '更新成功');
+}
+
+// 删除用户所有消息（管理员）
+if ($action === 'delete_user_messages' && $method === 'POST') {
+    if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'])) {
+        response(403, '权限不足');
+    }
+    
+    $user_id = $_POST['user_id'] ?? '';
+    
+    if (!$user_id) {
+        response(400, '用户ID不能为空');
+    }
+    
+    $db->exec("DELETE FROM messages WHERE user_id = ?", [$user_id]);
+    response(200, '删除成功');
 }
 
 response(404, '接口不存在');
