@@ -181,17 +181,24 @@ session_start();
             border-left: 3px solid #667eea;
         }
         
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
         .message-author {
             color: #667eea;
             font-weight: 600;
-            font-size: 12px;
-            margin-bottom: 5px;
+            font-size: 13px;
         }
         
         .message-time {
             color: #999;
-            font-size: 11px;
-            margin-left: 10px;
+            font-size: 12px;
         }
         
         .message-content {
@@ -457,6 +464,18 @@ session_start();
         let currentRoom = null;
         let currentUser = null;
         
+        // 格式化日期时间
+        function formatDateTime(dateString) {
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+        
         function switchTab(tab) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
@@ -604,9 +623,12 @@ session_start();
                     data.data.forEach(msg => {
                         const div = document.createElement('div');
                         div.className = 'message';
-                        const time = new Date(msg.created_at).toLocaleTimeString();
+                        const dateTime = formatDateTime(msg.created_at);
                         div.innerHTML = `
-                            <div class="message-author">${msg.username || '匿名'}<span class="message-time">${time}</span></div>
+                            <div class="message-header">
+                                <div class="message-author">${msg.username || '匿名'}</div>
+                                <div class="message-time">${dateTime}</div>
+                            </div>
                             <div class="message-content">${msg.content}</div>
                             ${msg.image_url ? `<img src="${msg.image_url}" class="message-image">` : ''}
                         `;
@@ -756,10 +778,11 @@ session_start();
                     data.data.forEach(msg => {
                         const div = document.createElement('div');
                         div.className = 'user-row';
+                        const dateTime = formatDateTime(msg.created_at);
                         div.innerHTML = `
                             <div class="username">${msg.username || '匿名'} @ ${msg.room_name || '未知房间'}</div>
                             <div class="info">${msg.content}</div>
-                            <div style="font-size: 10px; color: #ccc; margin-top: 5px;">${msg.created_at}</div>
+                            <div style="font-size: 10px; color: #ccc; margin-top: 5px;">${dateTime}</div>
                         `;
                         list.appendChild(div);
                     });
