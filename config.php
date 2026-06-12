@@ -12,8 +12,8 @@ return [
     // 上传配置
     'upload' => [
         'dir' => __DIR__ . '/uploads/',
-        'max_size' => 5 * 1024 * 1024,  // 5MB
-        'allowed_types' => ['jpg', 'jpeg', 'png', 'gif'],
+        'max_size' => 200 * 1024 * 1024,  // 200MB
+        'allowed_types' => ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'mp4', 'webm', 'avi', 'mov', 'mkv', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar', '7z', 'txt', 'csv'],
     ],
     
     // qqwry.dat IP定位库路径
@@ -27,8 +27,8 @@ return [
         'words' => ['敏感词1', '敏感词2'],         // 聊天禁用词
     ],
     
-    // 管理员密码
-    'admin_password' => 'admin123',
+    // 管理员列表（可配置多个）
+    'admins' => ['fibulun', 'admin'],
     
     // session配置
     'session' => [
