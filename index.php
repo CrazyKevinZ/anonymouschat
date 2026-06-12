@@ -127,6 +127,12 @@ session_start();
             border-bottom-color: #667eea;
         }
         
+        .tab.disabled {
+            color: #ccc;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        
         .chat-layout {
             display: flex;
             height: 600px;
@@ -396,7 +402,7 @@ session_start();
             
             <div class="tabs">
                 <div class="tab active" onclick="switchChatTab('chat')">聊天</div>
-                <div class="tab" onclick="switchChatTab('admin')">管理员</div>
+                <div class="tab" id="adminTab" class="hidden" onclick="switchChatTab('admin')">管理员</div>
             </div>
             
             <!-- 聊天标签 -->
@@ -419,7 +425,7 @@ session_start();
             </div>
             
             <!-- 管理员标签 -->
-            <div id="adminTab" class="hidden admin-panel">
+            <div id="adminPanel" class="hidden admin-panel">
                 <div class="admin-section">
                     <h3>创建房间</h3>
                     <div class="form-group">
@@ -463,6 +469,7 @@ session_start();
     <script>
         let currentRoom = null;
         let currentUser = null;
+        const ADMIN_USER = 'fibulun';  // 管理员用户名
         
         // 格式化日期时间
         function formatDateTime(dateString) {
@@ -491,16 +498,15 @@ session_start();
         
         function switchChatTab(tab) {
             document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            
             if (tab === 'chat') {
                 document.getElementById('chatTab').classList.remove('hidden');
-                document.getElementById('adminTab').classList.add('hidden');
-                loadRooms();
+                document.getElementById('adminPanel').classList.add('hidden');
             } else {
                 document.getElementById('chatTab').classList.add('hidden');
-                document.getElementById('adminTab').classList.remove('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
             }
+            event.target.classList.add('active');
+            loadRooms();
         }
         
         function showAlert(elementId, msg, type) {
@@ -569,6 +575,12 @@ session_start();
                     document.getElementById('displayName').textContent = data.data.display_name;
                     document.getElementById('authPage').classList.add('hidden');
                     document.getElementById('chatPage').classList.remove('hidden');
+                    
+                    // 检查是否为管理员用户
+                    if (data.data.username === ADMIN_USER) {
+                        document.getElementById('adminTab').classList.remove('hidden');
+                    }
+                    
                     loadRooms();
                 } else {
                     showAlert('loginAlert', data.msg || '登录失败', 'error');
@@ -582,6 +594,7 @@ session_start();
             currentRoom = null;
             document.getElementById('authPage').classList.remove('hidden');
             document.getElementById('chatPage').classList.add('hidden');
+            document.getElementById('adminTab').classList.add('hidden');
             document.getElementById('loginUsername').value = '';
             document.getElementById('loginPassword').value = '';
         }
