@@ -93,6 +93,18 @@ class Database {
                 )
             ");
         }
+        
+        // IP黑名单表
+        if (!in_array('ip_blacklist', $table_names)) {
+            $this->pdo->exec("
+                CREATE TABLE ip_blacklist (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ip TEXT UNIQUE NOT NULL,
+                    reason TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
+        }
     }
     
     public function query($sql, $params = []) {
