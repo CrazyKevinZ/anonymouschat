@@ -1,0 +1,9 @@
+data/
+uploads/
+.DS_Store
+*.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
