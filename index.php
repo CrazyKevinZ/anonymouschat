@@ -25,7 +25,7 @@ session_start();
         
         .container {
             width: 90%;
-            max-width: 900px;
+            max-width: 1000px;
             background: white;
             border-radius: 10px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
@@ -105,10 +105,26 @@ session_start();
             transform: translateY(0);
         }
         
+        .btn-small {
+            width: auto;
+            padding: 8px 16px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
         .tabs {
             display: flex;
             border-bottom: 2px solid #eee;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }
         
         .tab {
@@ -120,6 +136,7 @@ session_start();
             color: #666;
             font-weight: 500;
             transition: all 0.3s;
+            min-width: 100px;
         }
         
         .tab.active {
@@ -258,6 +275,29 @@ session_start();
         
         .admin-panel {
             padding: 20px;
+            max-height: 800px;
+            overflow-y: auto;
+        }
+        
+        .admin-tabs {
+            display: flex;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .admin-tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            color: #666;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .admin-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
         }
         
         .admin-section {
@@ -265,6 +305,11 @@ session_start();
             padding: 20px;
             background: #f9f9f9;
             border-radius: 5px;
+            display: none;
+        }
+        
+        .admin-section.show {
+            display: block;
         }
         
         .admin-section h3 {
@@ -274,23 +319,41 @@ session_start();
             padding-bottom: 10px;
         }
         
-        .user-row {
+        .item-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .item-row {
             padding: 12px;
             background: white;
             margin-bottom: 10px;
             border-radius: 5px;
             font-size: 12px;
             border-left: 3px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
-        .user-row .username {
+        .item-row .item-info {
+            flex: 1;
+        }
+        
+        .item-row .item-name {
             font-weight: 600;
             color: #333;
+            margin-bottom: 5px;
         }
         
-        .user-row .info {
+        .item-row .item-desc {
             color: #666;
-            margin-top: 5px;
+            font-size: 11px;
+        }
+        
+        .item-row .item-actions {
+            flex-shrink: 0;
+            margin-left: 10px;
         }
         
         .alert {
@@ -337,6 +400,23 @@ session_start();
         
         .logout-btn:hover {
             background: #c82333;
+        }
+        
+        .inline-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .inline-form input {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .inline-form .btn {
+            width: auto;
+            flex-shrink: 0;
         }
     </style>
 </head>
@@ -402,7 +482,7 @@ session_start();
             
             <div class="tabs">
                 <div class="tab active" onclick="switchChatTab('chat')">聊天</div>
-                <div class="tab" id="adminTab" class="hidden" onclick="switchChatTab('admin')">管理员</div>
+                <div class="tab" id="adminTab" class="hidden" onclick="switchChatTab('admin')">⚙️ 管理员</div>
             </div>
             
             <!-- 聊天标签 -->
@@ -424,9 +504,18 @@ session_start();
                 </div>
             </div>
             
-            <!-- 管理员标签 -->
+            <!-- 管理员面板 -->
             <div id="adminPanel" class="hidden admin-panel">
-                <div class="admin-section">
+                <div class="admin-tabs">
+                    <div class="admin-tab active" onclick="switchAdminTab('rooms')">房间管理</div>
+                    <div class="admin-tab" onclick="switchAdminTab('blacklist')">黑名单字词</div>
+                    <div class="admin-tab" onclick="switchAdminTab('ipblacklist')">IP黑名单</div>
+                    <div class="admin-tab" onclick="switchAdminTab('users')">用户管理</div>
+                    <div class="admin-tab" onclick="switchAdminTab('messages')">消息管理</div>
+                </div>
+                
+                <!-- 房间管理 -->
+                <div id="roomsSection" class="admin-section show">
                     <h3>创建房间</h3>
                     <div class="form-group">
                         <label>房间名称</label>
@@ -436,31 +525,46 @@ session_start();
                         <label>房间描述</label>
                         <textarea id="newRoomDesc"></textarea>
                     </div>
-                    <div class="form-group">
-                        <label>管理员密码</label>
-                        <input type="password" id="createRoomPwd">
-                    </div>
                     <button class="btn" onclick="createRoom()">创建房间</button>
+                    <h3 style="margin-top: 30px;">现有房间</h3>
+                    <div class="item-list" id="roomsList"></div>
                 </div>
                 
-                <div class="admin-section">
-                    <h3>用户管理</h3>
-                    <div class="form-group">
-                        <label>管理员密码</label>
-                        <input type="password" id="usersPwd">
+                <!-- 黑名单字词 -->
+                <div id="blacklistSection" class="admin-section">
+                    <h3>添加黑名单字词</h3>
+                    <div class="inline-form">
+                        <input type="text" id="newBlacklistWord" placeholder="输入禁用的字词">
+                        <button class="btn btn-small" onclick="addBlacklistWord()">添加</button>
                     </div>
-                    <button class="btn" onclick="loadUsers()">查看所有用户</button>
-                    <div id="usersList" style="margin-top: 20px;"></div>
+                    <h3>现有黑名单字词</h3>
+                    <div class="item-list" id="blacklistList"></div>
                 </div>
                 
-                <div class="admin-section">
+                <!-- IP黑名单 -->
+                <div id="ipblacklistSection" class="admin-section">
+                    <h3>添加IP黑名单</h3>
+                    <div class="inline-form">
+                        <input type="text" id="newBlacklistIP" placeholder="输入IP地址">
+                        <input type="text" id="newBlacklistReason" placeholder="屏蔽原因">
+                        <button class="btn btn-small" onclick="addIPBlacklist()">添加</button>
+                    </div>
+                    <h3>现有IP黑名单</h3>
+                    <div class="item-list" id="ipblacklistList"></div>
+                </div>
+                
+                <!-- 用户管理 -->
+                <div id="usersSection" class="admin-section">
+                    <h3>用户列表</h3>
+                    <button class="btn" onclick="loadUsersList()" style="width: 200px; margin-bottom: 20px;">刷新用户列表</button>
+                    <div class="item-list" id="usersList"></div>
+                </div>
+                
+                <!-- 消息管理 -->
+                <div id="messagesSection" class="admin-section">
                     <h3>消息管理</h3>
-                    <div class="form-group">
-                        <label>管理员密码</label>
-                        <input type="password" id="messagesPwd">
-                    </div>
-                    <button class="btn" onclick="loadAllMessages()">查看所有消息</button>
-                    <div id="allMessagesList" style="margin-top: 20px;"></div>
+                    <button class="btn" onclick="loadMessagesList()" style="width: 200px; margin-bottom: 20px;">加载所有消息</button>
+                    <div class="item-list" id="messagesList"></div>
                 </div>
             </div>
         </div>
@@ -469,9 +573,8 @@ session_start();
     <script>
         let currentRoom = null;
         let currentUser = null;
-        const ADMIN_USER = 'fibulun';  // 管理员用户名
+        const ADMIN_USER = 'fibulun';
         
-        // 格式化日期时间
         function formatDateTime(dateString) {
             const date = new Date(dateString);
             const year = date.getFullYear();
@@ -483,8 +586,15 @@ session_start();
             return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         }
         
+        function showAlert(elementId, msg, type) {
+            const alert = document.getElementById(elementId);
+            alert.textContent = msg;
+            alert.className = 'alert show ' + type;
+            setTimeout(() => alert.classList.remove('show'), 4000);
+        }
+        
         function switchTab(tab) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('#authPage .tabs .tab').forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
             
             if (tab === 'login') {
@@ -497,23 +607,42 @@ session_start();
         }
         
         function switchChatTab(tab) {
-            document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('#chatPage > .tabs .tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
             if (tab === 'chat') {
                 document.getElementById('chatTab').classList.remove('hidden');
                 document.getElementById('adminPanel').classList.add('hidden');
+                loadRooms();
             } else {
                 document.getElementById('chatTab').classList.add('hidden');
                 document.getElementById('adminPanel').classList.remove('hidden');
+                loadRoomsList();
             }
-            event.target.classList.add('active');
-            loadRooms();
         }
         
-        function showAlert(elementId, msg, type) {
-            const alert = document.getElementById(elementId);
-            alert.textContent = msg;
-            alert.className = 'alert show ' + type;
-            setTimeout(() => alert.classList.remove('show'), 4000);
+        function switchAdminTab(tab) {
+            document.querySelectorAll('.admin-tabs .admin-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('show'));
+            
+            if (tab === 'rooms') {
+                document.getElementById('roomsSection').classList.add('show');
+                loadRoomsList();
+            } else if (tab === 'blacklist') {
+                document.getElementById('blacklistSection').classList.add('show');
+                loadBlacklistWords();
+            } else if (tab === 'ipblacklist') {
+                document.getElementById('ipblacklistSection').classList.add('show');
+                loadIPBlacklist();
+            } else if (tab === 'users') {
+                document.getElementById('usersSection').classList.add('show');
+                loadUsersList();
+            } else if (tab === 'messages') {
+                document.getElementById('messagesSection').classList.add('show');
+                loadMessagesList();
+            }
         }
         
         function register() {
@@ -542,7 +671,7 @@ session_start();
                     document.getElementById('registerUsername').value = '';
                     document.getElementById('registerPassword').value = '';
                     setTimeout(() => {
-                        document.querySelectorAll('.tab')[0].click();
+                        document.querySelectorAll('#authPage .tabs .tab')[0].click();
                     }, 1000);
                 } else {
                     showAlert('registerAlert', data.msg || '注册失败', 'error');
@@ -576,7 +705,6 @@ session_start();
                     document.getElementById('authPage').classList.add('hidden');
                     document.getElementById('chatPage').classList.remove('hidden');
                     
-                    // 检查是否为管理员用户
                     if (data.data.username === ADMIN_USER) {
                         document.getElementById('adminTab').classList.remove('hidden');
                     }
@@ -612,6 +740,31 @@ session_start();
                         div.innerHTML = `<strong>${room.name}</strong><p style="font-size: 11px; color: #999; margin-top: 5px;">${room.description || ''}</p>`;
                         div.onclick = () => selectRoom(room.id, room.name, div);
                         roomList.appendChild(div);
+                    });
+                }
+            });
+        }
+        
+        function loadRoomsList() {
+            fetch('api.php?action=rooms')
+            .then(r => r.json())
+            .then(data => {
+                if (data.code === 200) {
+                    const roomsList = document.getElementById('roomsList');
+                    roomsList.innerHTML = '';
+                    data.data.forEach(room => {
+                        const div = document.createElement('div');
+                        div.className = 'item-row';
+                        div.innerHTML = `
+                            <div class="item-info">
+                                <div class="item-name">${room.name}</div>
+                                <div class="item-desc">${room.description || '无描述'}</div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn btn-small btn-danger" onclick="deleteRoom(${room.id})">删除</button>
+                            </div>
+                        `;
+                        roomsList.appendChild(div);
                     });
                 }
             });
@@ -717,17 +870,15 @@ session_start();
         function createRoom() {
             const name = document.getElementById('newRoomName').value;
             const desc = document.getElementById('newRoomDesc').value;
-            const pwd = document.getElementById('createRoomPwd').value;
             
-            if (!name || !pwd) {
-                alert('请填写房间名称和管理员密码');
+            if (!name) {
+                alert('请填写房间名称');
                 return;
             }
             
             const formData = new FormData();
             formData.append('name', name);
             formData.append('description', desc);
-            formData.append('admin_password', pwd);
             
             fetch('api.php?action=create_room', {
                 method: 'POST',
@@ -739,7 +890,7 @@ session_start();
                     alert('房间创建成功');
                     document.getElementById('newRoomName').value = '';
                     document.getElementById('newRoomDesc').value = '';
-                    document.getElementById('createRoomPwd').value = '';
+                    loadRoomsList();
                     loadRooms();
                 } else {
                     alert(data.msg || '创建失败');
@@ -747,14 +898,175 @@ session_start();
             });
         }
         
-        function loadUsers() {
-            const pwd = document.getElementById('usersPwd').value;
-            if (!pwd) {
-                alert('请输入管理员密码');
+        function deleteRoom(roomId) {
+            if (!confirm('确定要删除该房间吗？')) return;
+            
+            const formData = new FormData();
+            formData.append('room_id', roomId);
+            
+            fetch('api.php?action=delete_room', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert('房间删除成功');
+                    loadRoomsList();
+                    loadRooms();
+                } else {
+                    alert(data.msg || '删除失败');
+                }
+            });
+        }
+        
+        function loadBlacklistWords() {
+            fetch('api.php?action=get_blacklist_words')
+            .then(r => r.json())
+            .then(data => {
+                if (data.code === 200) {
+                    const list = document.getElementById('blacklistList');
+                    list.innerHTML = '';
+                    data.data.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'item-row';
+                        div.innerHTML = `
+                            <div class="item-info">
+                                <div class="item-name">${item.content}</div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn btn-small btn-danger" onclick="deleteBlacklistWord(${item.id})">删除</button>
+                            </div>
+                        `;
+                        list.appendChild(div);
+                    });
+                }
+            });
+        }
+        
+        function addBlacklistWord() {
+            const content = document.getElementById('newBlacklistWord').value;
+            if (!content) {
+                alert('请输入字词');
                 return;
             }
             
-            fetch(`api.php?action=users&admin_password=${pwd}`)
+            const formData = new FormData();
+            formData.append('content', content);
+            
+            fetch('api.php?action=add_blacklist_word', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert('添加成功');
+                    document.getElementById('newBlacklistWord').value = '';
+                    loadBlacklistWords();
+                } else {
+                    alert(data.msg || '添加失败');
+                }
+            });
+        }
+        
+        function deleteBlacklistWord(id) {
+            if (!confirm('确定要删除该字词吗？')) return;
+            
+            const formData = new FormData();
+            formData.append('id', id);
+            
+            fetch('api.php?action=delete_blacklist_word', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.code === 200) {
+                    loadBlacklistWords();
+                } else {
+                    alert(data.msg || '删除失败');
+                }
+            });
+        }
+        
+        function loadIPBlacklist() {
+            fetch('api.php?action=get_ip_blacklist')
+            .then(r => r.json())
+            .then(data => {
+                if (data.code === 200) {
+                    const list = document.getElementById('ipblacklistList');
+                    list.innerHTML = '';
+                    data.data.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'item-row';
+                        div.innerHTML = `
+                            <div class="item-info">
+                                <div class="item-name">${item.ip}</div>
+                                <div class="item-desc">${item.reason || '无原因'}</div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn btn-small btn-danger" onclick="deleteIPBlacklist(${item.id})">删除</button>
+                            </div>
+                        `;
+                        list.appendChild(div);
+                    });
+                }
+            });
+        }
+        
+        function addIPBlacklist() {
+            const ip = document.getElementById('newBlacklistIP').value;
+            const reason = document.getElementById('newBlacklistReason').value;
+            
+            if (!ip) {
+                alert('请输入IP地址');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('ip', ip);
+            formData.append('reason', reason);
+            
+            fetch('api.php?action=add_ip_blacklist', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert('添加成功');
+                    document.getElementById('newBlacklistIP').value = '';
+                    document.getElementById('newBlacklistReason').value = '';
+                    loadIPBlacklist();
+                } else {
+                    alert(data.msg || '添加失败');
+                }
+            });
+        }
+        
+        function deleteIPBlacklist(id) {
+            if (!confirm('确定要删除该IP吗？')) return;
+            
+            const formData = new FormData();
+            formData.append('id', id);
+            
+            fetch('api.php?action=delete_ip_blacklist', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.code === 200) {
+                    loadIPBlacklist();
+                } else {
+                    alert(data.msg || '删除失败');
+                }
+            });
+        }
+        
+        function loadUsersList() {
+            fetch('api.php?action=users')
             .then(r => r.json())
             .then(data => {
                 if (data.code === 200) {
@@ -762,10 +1074,16 @@ session_start();
                     list.innerHTML = '';
                     data.data.forEach(user => {
                         const div = document.createElement('div');
-                        div.className = 'user-row';
+                        div.className = 'item-row';
                         div.innerHTML = `
-                            <div class="username">${user.username}</div>
-                            <div class="info">性别: ${user.gender || '保密'} | 注册IP: ${user.register_ip} | 最后登录: ${user.last_login_at || '未登录'}</div>
+                            <div class="item-info">
+                                <div class="item-name">${user.username}</div>
+                                <div class="item-desc">性别: ${user.gender || '保密'} | 注册IP: ${user.register_ip} | 最后登录: ${user.last_login_at || '未登录'}</div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn btn-small" onclick="editUserGender(${user.id}, '${user.username}')">编辑</button>
+                                <button class="btn btn-small btn-danger" onclick="deleteUserMessages(${user.id})">清空消息</button>
+                            </div>
                         `;
                         list.appendChild(div);
                     });
@@ -775,39 +1093,110 @@ session_start();
             });
         }
         
-        function loadAllMessages() {
-            const pwd = document.getElementById('messagesPwd').value;
-            if (!pwd) {
-                alert('请输入管理员密码');
+        function editUserGender(userId, username) {
+            const gender = prompt(`编辑 ${username} 的性别:\n1. unknown (保密)\n2. male (男)\n3. female (女)\n\n请输入 unknown/male/female:`);
+            
+            if (!gender) return;
+            
+            if (!['unknown', 'male', 'female'].includes(gender)) {
+                alert('请输入正确的性别');
                 return;
             }
             
-            fetch(`api.php?action=user_messages&admin_password=${pwd}`)
+            const formData = new FormData();
+            formData.append('user_id', userId);
+            formData.append('gender', gender);
+            
+            fetch('api.php?action=update_user', {
+                method: 'POST',
+                body: formData
+            })
             .then(r => r.json())
             .then(data => {
                 if (data.code === 200) {
-                    const list = document.getElementById('allMessagesList');
+                    alert('更新成功');
+                    loadUsersList();
+                } else {
+                    alert(data.msg || '更新失败');
+                }
+            });
+        }
+        
+        function deleteUserMessages(userId) {
+            if (!confirm('确定要删除该用户的所有消息吗？')) return;
+            
+            const formData = new FormData();
+            formData.append('user_id', userId);
+            
+            fetch('api.php?action=delete_user_messages', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert('删除成功');
+                    loadUsersList();
+                } else {
+                    alert(data.msg || '删除失败');
+                }
+            });
+        }
+        
+        function loadMessagesList() {
+            fetch('api.php?action=user_messages')
+            .then(r => r.json())
+            .then(data => {
+                if (data.code === 200) {
+                    const list = document.getElementById('messagesList');
                     list.innerHTML = '';
-                    data.data.forEach(msg => {
+                    data.data.slice(0, 100).forEach(msg => {
                         const div = document.createElement('div');
-                        div.className = 'user-row';
+                        div.className = 'item-row';
                         const dateTime = formatDateTime(msg.created_at);
                         div.innerHTML = `
-                            <div class="username">${msg.username || '匿名'} @ ${msg.room_name || '未知房间'}</div>
-                            <div class="info">${msg.content}</div>
-                            <div style="font-size: 10px; color: #ccc; margin-top: 5px;">${dateTime}</div>
+                            <div class="item-info">
+                                <div class="item-name">${msg.username || '匿名'} @ ${msg.room_name || '未知房间'}</div>
+                                <div class="item-desc">${msg.content.substring(0, 50)}${msg.content.length > 50 ? '...' : ''}</div>
+                                <div class="item-desc" style="font-size: 10px; color: #999; margin-top: 3px;">${dateTime}</div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn btn-small btn-danger" onclick="deleteMessage(${msg.id})">删除</button>
+                            </div>
                         `;
                         list.appendChild(div);
                     });
                 } else {
                     alert(data.msg || '获取失败');
+                }
+            });
+        }
+        
+        function deleteMessage(messageId) {
+            if (!confirm('确定要删除该消息吗？')) return;
+            
+            const formData = new FormData();
+            formData.append('message_id', messageId);
+            
+            fetch('api.php?action=delete_message', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.code === 200) {
+                    loadMessagesList();
+                } else {
+                    alert(data.msg || '删除失败');
                 }
             });
         }
         
         // 定时刷新消息
         setInterval(() => {
-            if (currentRoom) loadMessages();
+            if (currentRoom && !document.getElementById('adminPanel').offsetHeight) {
+                loadMessages();
+            }
         }, 2000);
     </script>
 </body>
